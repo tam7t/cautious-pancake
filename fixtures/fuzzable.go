@@ -23,7 +23,7 @@ func NoNet(a string) error {
 	return err
 }
 
-func NoGlobal(a string) {
+func NoGlobalWrite(a string) {
 	startString = a
 }
 
@@ -48,13 +48,12 @@ func YesAnonymousDynamicCall() string {
 	return c
 }
 
-// not sure if this is actually a good one
-func YesGlobal() string {
+func NoGlobalRead() string {
 	return startString
 }
 
 func YesFuncParam() string {
-	return yes(YesGlobal)
+	return yes(Yes)
 }
 
 func yes(a func() string) string {

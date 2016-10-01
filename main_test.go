@@ -21,7 +21,6 @@ func TestAnalyze(t *testing.T) {
 		"Yes":                       false,
 		"init$1":                    false,
 		"YesAppend":                 false,
-		"YesGlobal":                 false,
 		"yes":                       false,
 		"YesPanic":                  false,
 	}

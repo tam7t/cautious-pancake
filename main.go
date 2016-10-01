@@ -71,7 +71,7 @@ func MarkImpure(cg *callgraph.Graph) (map[*ssa.Function]bool, error) {
 
 	// basic analysis
 	for fn, _ := range cg.Nodes {
-		results[fn] = modifiesState(fn) || usesInterface(fn)
+		results[fn] = accessGlobal(fn) || usesInterface(fn)
 	}
 
 	// sub function analysis, if a func calls an func that is not pure then it
@@ -100,9 +100,9 @@ func MarkImpure(cg *callgraph.Graph) (map[*ssa.Function]bool, error) {
 	return results, nil
 }
 
-// modifiesState does a simple analysis of the ssa representation of a function to detect
-// whether a global variable is modified as part of the function
-func modifiesState(f *ssa.Function) bool {
+// accessGlobal does a simple analysis of the ssa representation of a function to detect
+// whether a global variable is read or modified as part of the function
+func accessGlobal(f *ssa.Function) bool {
 	if f == nil {
 		// nil functions probably dont modify state?
 		return false
@@ -111,10 +111,13 @@ func modifiesState(f *ssa.Function) bool {
 	// check each instruction
 	for _, b := range f.Blocks {
 		for _, i := range b.Instrs {
-			if _, ok := i.(*ssa.Store); ok {
-				store := i.(*ssa.Store)
-				// are we writing to a global?
-				if _, ok := store.Addr.(*ssa.Global); ok {
+			switch v := i.(type) {
+			case *ssa.Store:
+				if _, ok := v.Addr.(*ssa.Global); ok {
+					return true
+				}
+			case *ssa.UnOp:
+				if _, ok := v.X.(*ssa.Global); ok {
 					return true
 				}
 			}
