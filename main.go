@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"go/build"
+	"go/types"
 	"log"
 	"strings"
 
@@ -70,7 +71,7 @@ func MarkImpure(cg *callgraph.Graph) (map[*ssa.Function]bool, error) {
 
 	// basic analysis
 	for fn, _ := range cg.Nodes {
-		results[fn] = modifiesState(fn)
+		results[fn] = modifiesState(fn) || usesInterface(fn)
 	}
 
 	// sub function analysis, if a func calls an func that is not pure then it
@@ -117,6 +118,20 @@ func modifiesState(f *ssa.Function) bool {
 					return true
 				}
 			}
+		}
+	}
+	return false
+}
+
+// eliminate functions that have interface inputs since we dont know how they will actually be implemented (and may depend on global state.
+// todo: check structs for iface parameters
+func usesInterface(f *ssa.Function) bool {
+	if f == nil {
+		return false
+	}
+	for _, v := range f.Params {
+		if types.IsInterface(v.Type()) {
+			return true
 		}
 	}
 	return false
