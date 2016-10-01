@@ -33,6 +33,14 @@ func NoDynamicCall(a string) string {
 	return b(a)
 }
 
+type Foo interface {
+	Bar()
+}
+
+func NoInterface(a Foo) {
+	a.Bar()
+}
+
 func YesAnonymousDynamicCall() string {
 	a := "hi"
 	b := func() string { return a }
