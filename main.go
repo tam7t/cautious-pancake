@@ -79,16 +79,15 @@ import (
 
 func main() { {{ $length := len .Params }}{{if gt $length 0}}
 	f := fuzz.New(){{end}}
+	{{range $i, $v := .Params}}var p{{$i}} {{$v.Type.String}}{{end}}
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("found panic", r){{range $i, $v := .Params}}
+			fmt.Printf("p{{$i}}: %v\n", p{{$i}}){{end}}
+		}
+	}()
 	for { {{range $i, $v := .Params}}
-		var p{{$i}} {{$v.Type.String}}
-		f.Fuzz(&p{{$i}})
-		{{end}}
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("found panic", r){{range $ii, $vv := .Params}}
-				fmt.Printf("p{{$ii}}: %v\n", p{{$ii}}){{end}}
-			}
-		}()
+		f.Fuzz(&p{{$i}}){{end}}
 		{{.Package.Pkg.Name}}.{{.Name}}({{range $i, $v := .Params}}p{{$i}}{{if $i}}, {{end}}{{end}})
 	}
 }`

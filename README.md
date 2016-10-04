@@ -28,16 +28,15 @@ import (
 
 func main() {
 	f := fuzz.New()
+	var p0 byte
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("found panic", r)
+			fmt.Printf("p0: %v\n", p0)
+		}
+	}()
 	for {
-		var p0 byte
 		f.Fuzz(&p0)
-
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("found panic", r)
-				fmt.Printf("p0: %v\n", p0)
-			}
-		}()
 		fixtures.YesMaybePanic(p0)
 	}
 }
