@@ -5,14 +5,17 @@ github generated the repo name for me
 This is a work in progress project to automate fuzzing of golang packages.
 
 [go-fuzz](https://github.com/dvyukov/go-fuzz) is a great tool for finding bugs in golang programs, but it
-requires that you identify and instrument the functions to fuzz. Thats where cautious-pancake comes in.
+requires that you identify and instrument the functions to fuzz. Thats where `cautious-pancake` comes in.
 
-cautious-pancake identifies [pure function](https://en.wikipedia.org/wiki/Pure_function) in golang packages.
+`cautious-pancake` identifies [pure function](https://en.wikipedia.org/wiki/Pure_function) in golang packages.
 These are functions can be fuzzed easily since they only operate on their direct inputs and not global
 state.
 
 
 ## example
+You can provide `cautious-pancake` with a package to analyze and it will print out all of the 'pure' functions
+and attempt to generate code that can be run to fuzz those functions:
+
 ```
 $ go build .
 $ ./cautious-pancake github.com/tam7t/cautious-pancake/fixtures
