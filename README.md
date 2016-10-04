@@ -45,3 +45,9 @@ func main() {
 -- (YesManipulate)
 ...
 ```
+If you run the generated code for `YesMaybePanic` you will quickly get the following output:
+```
+found panic bad input
+p0: 10
+```
+indicating that `fixtures.YesMaybePanic(0xA)` will result in a panic.
