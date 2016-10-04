@@ -18,6 +18,7 @@ func TestAnalyze(t *testing.T) {
 		"YesAnonymousDynamicCall$1": false,
 		"YesParser":                 false,
 		"YesParse":                  false,
+		"YesMaybePanic":             false,
 		"Yes":                       false,
 		"init$1":                    false,
 		"YesAppend":                 false,

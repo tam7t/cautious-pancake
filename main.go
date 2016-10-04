@@ -1,12 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"go/build"
 	"go/types"
+	"html/template"
 	"log"
-	"strings"
 
 	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/callgraph/cha"
@@ -54,14 +55,49 @@ func Analyze(pkgs []string) (map[*ssa.Function]bool, error) {
 		if k == nil {
 			continue
 		}
-		_, ok := conf.ImportPkgs[strings.TrimPrefix(k.Package().String(), "package ")]
+		_, ok := conf.ImportPkgs[k.Package().Pkg.Path()]
 		if ok && !v {
 			filtered[k] = v
-			fmt.Printf("%s\n", k.Name())
+
+			fmt.Printf("-- (%s)\n", k.Name())
+			fmt.Println(PrintFuzz(k))
+			fmt.Println("--")
 		}
 	}
 
 	return filtered, nil
+}
+
+const fuzzTemp = `package main
+
+import (
+	"fmt"
+
+	"github.com/google/gofuzz"
+	"{{.Package.Pkg.Path}}"
+)
+
+func main() { {{ $length := len .Params }}{{if gt $length 0}}
+	f := fuzz.New(){{end}}
+	for { {{range $i, $v := .Params}}
+		var p{{$i}} {{$v.Type.String}}
+		f.Fuzz(&p{{$i}})
+		{{end}}
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("found panic", r){{range $ii, $vv := .Params}}
+				fmt.Printf("p{{$ii}}: %v\n", p{{$ii}}){{end}}
+			}
+		}()
+		{{.Package.Pkg.Name}}.{{.Name}}({{range $i, $v := .Params}}p{{$i}}{{if $i}}, {{end}}{{end}})
+	}
+}`
+
+func PrintFuzz(f *ssa.Function) string {
+	var out bytes.Buffer
+	tmpl := template.Must(template.New("").Parse(fuzzTemp))
+	tmpl.Execute(&out, f)
+	return out.String()
 }
 
 // MarkImpure takes a callgraph and analyses the nodes looking for functions that modify
