@@ -1,4 +1,4 @@
-package cases
+package fixtures
 
 import (
 	"fmt"
@@ -84,6 +84,12 @@ func YesPanicNil() string {
 
 func YesPanic() {
 	panic("bad")
+}
+
+func YesMaybePanic(i byte) {
+	if i == 10 {
+		panic("bad input")
+	}
 }
 
 type MyStuff struct {

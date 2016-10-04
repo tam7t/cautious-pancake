@@ -16,9 +16,32 @@ state.
 ```
 $ go build .
 $ ./cautious-pancake github.com/tam7t/cautious-pancake/fixtures
-YesParse
-YesManipulate
-YesAppend
-YesAnonymousDynamicCall
+-- (YesMaybePanic)
+package main
+
+import (
+	"fmt"
+
+	"github.com/google/gofuzz"
+	"github.com/tam7t/cautious-pancake/fixtures"
+)
+
+func main() {
+	f := fuzz.New()
+	for {
+		var p0 byte
+		f.Fuzz(&p0)
+
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("found panic", r)
+				fmt.Printf("p0: %v\n", p0)
+			}
+		}()
+		fixtures.YesMaybePanic(p0)
+	}
+}
+--
+-- (YesManipulate)
 ...
 ```
