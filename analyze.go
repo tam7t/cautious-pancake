@@ -1,13 +1,7 @@
-package main
+package cautiouspancake
 
 import (
-	"bytes"
-	"flag"
-	"fmt"
-	"go/build"
 	"go/types"
-	"html/template"
-	"log"
 
 	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/callgraph/cha"
@@ -16,29 +10,7 @@ import (
 	"golang.org/x/tools/go/ssa/ssautil"
 )
 
-func main() {
-	flag.Parse()
-	_, err := Analyze(flag.Args())
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func Analyze(pkgs []string) (map[*ssa.Function]bool, error) {
-	conf := loader.Config{Build: &build.Default}
-
-	// Use the initial packages from the command line.
-	_, err := conf.FromArgs(pkgs, false)
-	if err != nil {
-		return nil, err
-	}
-
-	// Load, parse and type-check the whole program.
-	iprog, err := conf.Load()
-	if err != nil {
-		return nil, err
-	}
-
+func Analyze(iprog *loader.Program) (map[*ssa.Function]bool, error) {
 	// Create and build SSA-form program representation.
 	prog := ssautil.CreateProgram(iprog, 0)
 	prog.Build()
@@ -47,56 +19,25 @@ func Analyze(pkgs []string) (map[*ssa.Function]bool, error) {
 	cg := cha.CallGraph(prog)
 	cg.DeleteSyntheticNodes()
 
+	// mark functions in the callgraph that are not 'pure'
 	results, err := MarkImpure(cg)
-	filtered := make(map[*ssa.Function]bool)
+	if err != nil {
+		return nil, err
+	}
 
-	// filter output
+	// filter output to only include functions imported by the program
+	filtered := make(map[*ssa.Function]bool)
 	for k, v := range results {
 		if k == nil {
 			continue
 		}
-		_, ok := conf.ImportPkgs[k.Package().Pkg.Path()]
+		_, ok := iprog.Imported[k.Package().Pkg.Path()]
 		if ok && !v {
 			filtered[k] = v
-
-			fmt.Printf("-- (%s)\n", k.Name())
-			fmt.Println(PrintFuzz(k))
-			fmt.Println("--")
 		}
 	}
 
 	return filtered, nil
-}
-
-const fuzzTemp = `package main
-
-import (
-	"fmt"
-
-	"github.com/google/gofuzz"
-	"{{.Package.Pkg.Path}}"
-)
-
-func main() { {{ $length := len .Params }}{{if gt $length 0}}
-	f := fuzz.New(){{end}}
-	{{range $i, $v := .Params}}var p{{$i}} {{$v.Type.String}}{{end}}
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("found panic", r){{range $i, $v := .Params}}
-			fmt.Printf("p{{$i}}: %v\n", p{{$i}}){{end}}
-		}
-	}()
-	for { {{range $i, $v := .Params}}
-		f.Fuzz(&p{{$i}}){{end}}
-		{{.Package.Pkg.Name}}.{{.Name}}({{range $i, $v := .Params}}p{{$i}}{{if $i}}, {{end}}{{end}})
-	}
-}`
-
-func PrintFuzz(f *ssa.Function) string {
-	var out bytes.Buffer
-	tmpl := template.Must(template.New("").Parse(fuzzTemp))
-	tmpl.Execute(&out, f)
-	return out.String()
 }
 
 // MarkImpure takes a callgraph and analyses the nodes looking for functions that modify

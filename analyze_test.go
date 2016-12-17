@@ -1,13 +1,17 @@
-package main
+package cautiouspancake
 
 import (
 	"fmt"
+	"go/build"
+	"log"
 	"reflect"
 	"testing"
+
+	"golang.org/x/tools/go/loader"
 )
 
 func TestAnalyze(t *testing.T) {
-	pkg := "github.com/tam7t/cautious-pancake/fixtures"
+	pkgs := []string{"github.com/tam7t/cautious-pancake/fixtures"}
 
 	exp := map[string]bool{
 		"YesManipulate":             false,
@@ -26,7 +30,21 @@ func TestAnalyze(t *testing.T) {
 		"YesPanic":                  false,
 	}
 
-	answer, err := Analyze([]string{pkg})
+	conf := loader.Config{Build: &build.Default}
+
+	// Use the initial packages from the command line.
+	_, err := conf.FromArgs(pkgs, false)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Load, parse and type-check the whole program.
+	iprog, err := conf.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	answer, err := Analyze(iprog)
 
 	if err != nil {
 		t.Error("err is not nil")

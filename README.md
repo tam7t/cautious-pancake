@@ -17,8 +17,8 @@ You can provide `cautious-pancake` with a package to analyze and it will print o
 and attempt to generate code that can be run to fuzz those functions:
 
 ```
-$ go build .
-$ ./cautious-pancake github.com/tam7t/cautious-pancake/fixtures
+$ go install github.com/tam7t/cautious-pancake/cmd/pancakeid
+$ pancakeid github.com/tam7t/cautious-pancake/fixtures
 -- (YesMaybePanic)
 package main
 
