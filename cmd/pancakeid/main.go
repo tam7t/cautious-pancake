@@ -31,15 +31,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	a, err := cautiouspancake.Analyze(iprog)
+	cg := cautiouspancake.NewCallGraph(iprog)
+	err = cg.Analyze()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for k, v := range a {
-		if !v {
-			fmt.Println(PrintFuzz(k))
-		}
+	for _, v := range cg.Pure() {
+		fmt.Println("--")
+		fmt.Println(PrintFuzz(v))
 	}
 }
 

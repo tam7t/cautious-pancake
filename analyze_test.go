@@ -44,19 +44,17 @@ func TestAnalyze(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	answer, err := Analyze(iprog)
-
+	cg := NewCallGraph(iprog)
+	err = cg.Analyze()
 	if err != nil {
 		t.Error("err is not nil")
 	}
 
 	actual := make(map[string]bool)
 
-	for k, v := range answer {
-		if !v {
-			fmt.Println(k.Name())
-			actual[k.Name()] = v
-		}
+	for _, v := range cg.Pure() {
+		fmt.Println(v.Name())
+		actual[v.Name()] = false
 	}
 
 	if !reflect.DeepEqual(exp, actual) {
