@@ -1,6 +1,8 @@
 package cautiouspancake
 
 import (
+	"fmt"
+	"go/token"
 	"go/types"
 
 	"golang.org/x/tools/go/callgraph"
@@ -14,7 +16,15 @@ import (
 type CallGraph struct {
 	Prog      *loader.Program
 	CallGraph *callgraph.Graph
-	Mapping   map[*ssa.Function]bool
+	Mapping   map[*ssa.Function]*Node
+}
+
+// Node contains details on why a function is marked as not pure
+type Node struct {
+	CallGraph     *CallGraph
+	RuleBasic     *token.Pos
+	RuleInterface *token.Pos
+	RuleCallee    *ssa.Function
 }
 
 // NewCallGraph creates a CallGraph by performing ssa analysis
@@ -30,8 +40,25 @@ func NewCallGraph(iprog *loader.Program) *CallGraph {
 	return &CallGraph{
 		Prog:      iprog,
 		CallGraph: cgo,
-		Mapping:   make(map[*ssa.Function]bool),
+		Mapping:   make(map[*ssa.Function]*Node),
 	}
+}
+
+func (n *Node) Pure() bool {
+	return (n.RuleBasic == nil && n.RuleInterface == nil && n.RuleCallee == nil)
+}
+
+func (n *Node) String() string {
+	if n.RuleBasic != nil {
+		return fmt.Sprintf("Impure - basic - %s", n.CallGraph.Prog.Fset.Position(*n.RuleBasic))
+	}
+	if n.RuleInterface != nil {
+		return fmt.Sprintf("Impure - iface - %s", n.CallGraph.Prog.Fset.Position(*n.RuleInterface))
+	}
+	if n.RuleCallee != nil {
+		return fmt.Sprintf("Impure - calls - %s", n.RuleCallee)
+	}
+	return "Pure"
 }
 
 // Analyze examines the callgraph looking for functions that modify global
@@ -39,7 +66,16 @@ func NewCallGraph(iprog *loader.Program) *CallGraph {
 func (cg *CallGraph) Analyze() error {
 	// basic analysis
 	for fn, _ := range cg.CallGraph.Nodes {
-		cg.Mapping[fn] = accessGlobal(fn) || usesInterface(fn)
+		n := &Node{
+			CallGraph: cg,
+		}
+		if pos := accessGlobal(fn); pos != nil {
+			n.RuleBasic = pos
+		}
+		if pos := usesInterface(fn); pos != nil {
+			n.RuleInterface = pos
+		}
+		cg.Mapping[fn] = n
 	}
 
 	// sub function analysis, if a func calls an func that is not pure then it
@@ -50,13 +86,13 @@ func (cg *CallGraph) Analyze() error {
 		caller := edge.Caller.Func
 
 		// callee modifies state, mark static callers bad as well
-		if cg.Mapping[callee] {
+		if !cg.Mapping[callee].Pure() {
 			if dynamic(edge) {
 				if !includes(edge.Site.Common().Value, caller.Params) {
-					cg.Mapping[edge.Caller.Func] = true
+					cg.Mapping[edge.Caller.Func].RuleCallee = callee
 				}
 			} else {
-				cg.Mapping[edge.Caller.Func] = true
+				cg.Mapping[edge.Caller.Func].RuleCallee = callee
 			}
 		}
 
@@ -79,7 +115,26 @@ func (cg *CallGraph) Pure() []*ssa.Function {
 			continue
 		}
 		_, ok := cg.Prog.Imported[k.Package().Pkg.Path()]
-		if ok && !v {
+		if ok && v.Pure() {
+			filtered = append(filtered, k)
+		}
+	}
+
+	return filtered
+}
+
+// Impure returns a slice of the ssa representations of the impure functions
+// in the analyzed package
+func (cg *CallGraph) Impure() []*ssa.Function {
+	// filter output to only include functions imported by the program
+	var filtered []*ssa.Function
+
+	for k, v := range cg.Mapping {
+		if k == nil {
+			continue
+		}
+		_, ok := cg.Prog.Imported[k.Package().Pkg.Path()]
+		if ok && !v.Pure() {
 			filtered = append(filtered, k)
 		}
 	}
@@ -89,10 +144,10 @@ func (cg *CallGraph) Pure() []*ssa.Function {
 
 // accessGlobal does a simple analysis of the ssa representation of a function
 // to detect whether a global variable is read or modified
-func accessGlobal(f *ssa.Function) bool {
+func accessGlobal(f *ssa.Function) *token.Pos {
 	if f == nil {
 		// nil functions probably do not modify state?
-		return false
+		return nil
 	}
 
 	for _, b := range f.Blocks {
@@ -100,32 +155,32 @@ func accessGlobal(f *ssa.Function) bool {
 			switch v := i.(type) {
 			case *ssa.Store:
 				if _, ok := v.Addr.(*ssa.Global); ok {
-					return true
+					return tokenPtr(v.Pos())
 				}
 			case *ssa.UnOp:
 				if _, ok := v.X.(*ssa.Global); ok {
-					return true
+					return tokenPtr(v.Pos())
 				}
 			}
 		}
 	}
-	return false
+	return nil
 }
 
 // usesInterface eliminates functions that accept an interface as a parameter
 // since it is difficult to resolve whether the interface's implementation will
 // modify global state
-func usesInterface(f *ssa.Function) bool {
+func usesInterface(f *ssa.Function) *token.Pos {
 	if f == nil {
-		return false
+		return nil
 	}
 	for _, v := range f.Params {
 		// TODO: check structs for iface parameters
 		if types.IsInterface(v.Type()) {
-			return true
+			return tokenPtr(v.Pos())
 		}
 	}
-	return false
+	return nil
 }
 
 // dynamic is a helper that checks whether the callgraph edge is a dynamic call
@@ -146,4 +201,9 @@ func includes(needle ssa.Value, hay []*ssa.Parameter) bool {
 		}
 	}
 	return false
+}
+
+// tokenPtr helps convert a function return value into a pointer
+func tokenPtr(in token.Pos) *token.Pos {
+	return &in
 }
