@@ -1,4 +1,4 @@
-# cautious-pancake
+# cautious-pancake [![Build Status](https://travis-ci.org/tam7t/cautious-pancake.svg?branch=master)](https://travis-ci.org/tam7t/cautious-pancake) [![GoDoc](https://godoc.org/github.com/tam7t/cautious-pancake?status.svg)](https://godoc.org/github.com/tam7t/cautious-pancake) [![Go Report Card](https://goreportcard.com/badge/github.com/tam7t/cautious-pancake)](https://goreportcard.com/report/github.com/tam7t/cautious-pancake)
 github generated the repo name for me
 
 ## fuzzing
