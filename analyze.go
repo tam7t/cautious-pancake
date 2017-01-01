@@ -14,9 +14,11 @@ import (
 
 // CallGraph keeps track of 'pure' and function
 type CallGraph struct {
-	Prog      *loader.Program
-	CallGraph *callgraph.Graph
-	Mapping   map[*ssa.Function]*Node
+	Prog       *loader.Program
+	CallGraph  *callgraph.Graph
+	Mapping    map[*ssa.Function]*Node
+	IgnoreCall map[string][]string
+	IgnoreRead map[string][]string
 }
 
 // Node contains details on why a function is marked as not pure
@@ -26,6 +28,19 @@ type Node struct {
 	RuleInterface *token.Pos
 	RuleCallee    *ssa.Function
 }
+
+var (
+	// Ignore function calls that technically access global state, but are rarely
+	// an issue for fuzzing in practice
+	DefaultIgnoreCall = map[string][]string{
+		"log": {"Print", "Printf", "Println"},
+		"fmt": {"Print", "Printf", "Println"},
+	}
+
+	DefaultIgnoreRead = map[string][]string{
+		"encoding/binary": {"BigEndian", "LittleEndian"},
+	}
+)
 
 // NewCallGraph creates a CallGraph by performing ssa analysis
 func NewCallGraph(iprog *loader.Program) *CallGraph {
@@ -38,9 +53,11 @@ func NewCallGraph(iprog *loader.Program) *CallGraph {
 	cgo.DeleteSyntheticNodes()
 
 	return &CallGraph{
-		Prog:      iprog,
-		CallGraph: cgo,
-		Mapping:   make(map[*ssa.Function]*Node),
+		Prog:       iprog,
+		CallGraph:  cgo,
+		Mapping:    make(map[*ssa.Function]*Node),
+		IgnoreCall: DefaultIgnoreCall,
+		IgnoreRead: DefaultIgnoreRead,
 	}
 }
 
@@ -69,7 +86,7 @@ func (cg *CallGraph) Analyze() error {
 		n := &Node{
 			CallGraph: cg,
 		}
-		if pos := accessGlobal(fn); pos != nil {
+		if pos := accessGlobal(fn, cg.IgnoreRead); pos != nil {
 			n.RuleBasic = pos
 		}
 		if pos := usesInterface(fn); pos != nil {
@@ -84,6 +101,10 @@ func (cg *CallGraph) Analyze() error {
 		// analyze callee (ssa.Function)
 		callee := edge.Callee.Func
 		caller := edge.Caller.Func
+
+		if isWhitelisted(callee, cg.IgnoreCall) {
+			return nil
+		}
 
 		// callee modifies state, mark static callers bad as well
 		if !cg.Mapping[callee].Pure() {
@@ -142,9 +163,35 @@ func (cg *CallGraph) Impure() []*ssa.Function {
 	return filtered
 }
 
+// isWhitelisted returns whether the ssa.Member (function or variable
+// reference) is in the whitelist. The whitlelist is a map of package paths to
+// a slice of names. Additionally, all error types are considered whitelisted
+// since they are commonly used as return values from parsers and I would
+// rather not enumerate all errors in the whitelist.
+func isWhitelisted(n ssa.Member, whitelist map[string][]string) bool {
+	if v, ok := n.Type().(*types.Pointer); ok {
+		if v.String() == "*error" {
+			return true
+		}
+	}
+
+	pkg := n.Package().Pkg.Path()
+	f := n.Name()
+
+	if list, ok := whitelist[pkg]; ok {
+		for _, v := range list {
+			if f == v {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 // accessGlobal does a simple analysis of the ssa representation of a function
 // to detect whether a global variable is read or modified
-func accessGlobal(f *ssa.Function) *token.Pos {
+func accessGlobal(f *ssa.Function, whitelist map[string][]string) *token.Pos {
 	if f == nil {
 		// nil functions probably do not modify state?
 		return nil
@@ -158,8 +205,10 @@ func accessGlobal(f *ssa.Function) *token.Pos {
 					return tokenPtr(v.Pos())
 				}
 			case *ssa.UnOp:
-				if _, ok := v.X.(*ssa.Global); ok {
-					return tokenPtr(v.Pos())
+				if j, ok := v.X.(*ssa.Global); ok {
+					if !isWhitelisted(j, whitelist) {
+						return tokenPtr(v.Pos())
+					}
 				}
 			}
 		}
@@ -183,7 +232,7 @@ func usesInterface(f *ssa.Function) *token.Pos {
 	return nil
 }
 
-// dynamic is a helper that checks whether the callgraph edge is a dynamic call
+// dynamic checks whether the callgraph edge is a dynamic call
 func dynamic(edge *callgraph.Edge) bool {
 	return edge.Site != nil && edge.Site.Common().StaticCallee() == nil
 }

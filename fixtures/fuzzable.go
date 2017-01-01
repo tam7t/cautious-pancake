@@ -1,8 +1,12 @@
 package fixtures
 
 import (
+	bin "encoding/binary"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -13,9 +17,10 @@ import (
 
 var startString = "start"
 var b func(a string) string = func(a string) string { return a }
+var e = errors.New("custom err")
 
 func NoPrint(a string) {
-	fmt.Println(a)
+	fmt.Fprintln(os.Stdout, a)
 }
 
 func NoNet(a string) error {
@@ -117,6 +122,24 @@ func NoWriter() {
 	}
 	x.NoWrite()
 
+}
+
+func YesRead() uint16 {
+	var out uint16
+	bin.BigEndian.PutUint16([]byte{0x0, 0x01}, out)
+	return out
+}
+
+func YesLog() {
+	log.Println("Foobar")
+}
+
+func YesErr() error {
+	return e
+}
+
+func NoWriteErr() {
+	e = errors.New("foo")
 }
 
 // TODO: do i care if it mutates the input?
