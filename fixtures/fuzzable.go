@@ -142,4 +142,11 @@ func NoWriteErr() {
 	e = errors.New("foo")
 }
 
+func YesFmtErr(a int) error {
+	if a > 0 {
+		return nil
+	}
+	return fmt.Errorf("bad %s", "asdf")
+}
+
 // TODO: do i care if it mutates the input?

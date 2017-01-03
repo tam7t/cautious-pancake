@@ -13,6 +13,27 @@ state.
 
 
 ## example
+
+### `pancakeinfo`
+Given a package, `pancakeinfo` will tell you which functions are pure:
+
+```
+$ go install github.com/tam7t/cautious-pancake/cmd/pancakeinfo
+$ pancakeinfo github.com/mdlayher/arp
+github.com/mdlayher/arp.NewPacket
+	Pure
+(github.com/mdlayher/arp.Client).HardwareAddr
+	Pure
+(*github.com/mdlayher/arp.Packet).UnmarshalBinary
+	Pure
+(*github.com/mdlayher/arp.Packet).MarshalBinary
+	Pure
+```
+
+You can set `IMPURE` environment variable to show information about why
+functions were deemed impure and `ALL` to include info on unexported functions.
+
+### `pancakeid`
 You can provide `cautious-pancake` with a package to analyze and it will print out all of the 'pure' functions
 and attempt to generate code that can be run to fuzz those functions:
 
