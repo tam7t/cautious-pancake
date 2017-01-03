@@ -39,8 +39,10 @@ func main() {
 	}
 
 	for _, v := range cg.Pure() {
-		fmt.Println("--")
-		fmt.Println(PrintFuzz(v))
+		if v.Object() != nil && v.Object().Exported() {
+			fmt.Println("--")
+			fmt.Println(PrintFuzz(v))
+		}
 	}
 }
 
