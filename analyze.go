@@ -34,7 +34,7 @@ var (
 	// an issue for fuzzing in practice
 	DefaultIgnoreCall = map[string][]string{
 		"log": {"Print", "Printf", "Println"},
-		"fmt": {"Print", "Printf", "Println"},
+		"fmt": {"Print", "Printf", "Println", "Errorf"},
 	}
 
 	DefaultIgnoreRead = map[string][]string{

@@ -31,6 +31,7 @@ func TestAnalyze(t *testing.T) {
 		"YesRead":                   false,
 		"YesLog":                    false,
 		"YesErr":                    false,
+		"YesFmtErr":                 false,
 	}
 
 	conf := loader.Config{Build: &build.Default}
