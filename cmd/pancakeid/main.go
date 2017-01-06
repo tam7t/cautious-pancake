@@ -5,9 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"go/build"
+	"go/types"
 	"html/template"
 	"log"
-	"path"
 
 	cautiouspancake "github.com/tam7t/cautious-pancake"
 
@@ -57,7 +57,7 @@ import (
 
 func main() { {{ $length := len .Params }}{{if gt $length 0}}
 	f := fuzz.New(){{end}}
-{{range $i, $v := .Params}}	var p{{$i}} {{$v.Type.String | strippkg}}
+{{range $i, $v := .Params}}	var p{{$i}} {{$v.Type | strippkg}}
 {{end}}
 	defer func() {
 		if r := recover(); r != nil {
@@ -74,7 +74,9 @@ func main() { {{ $length := len .Params }}{{if gt $length 0}}
 func PrintFuzz(f *ssa.Function) string {
 	var out bytes.Buffer
 	tmpl := template.Must(template.New("").Funcs(template.FuncMap{"strippkg": func(a interface{}) string {
-		return path.Base(a.(string))
+		return types.TypeString(a.(types.Type), func(p *types.Package) string {
+			return p.Name()
+		})
 	}}).Parse(fuzzTemp))
 	tmpl.Execute(&out, f)
 	return out.String()
