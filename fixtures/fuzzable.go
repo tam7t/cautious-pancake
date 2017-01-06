@@ -106,6 +106,10 @@ func (a *MyStuff) YesParse(b string) {
 	a.MyValue = b
 }
 
+func (a *MyStuff) YesMultArgs(b string, c string) {
+	a.MyValue = b + c
+}
+
 func (a *MyStuff) NoWrite() {
 	startString = a.MyValue
 }
