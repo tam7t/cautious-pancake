@@ -68,9 +68,9 @@ func main() { {{ $length := len .Params }}{{if gt $length 0}}
 	for { {{range $i, $v := .Params}}
 		f.Fuzz(&p{{$i}}){{end}}
 		{{if .Signature.Recv}}
-		p0.{{.Name}}({{range $i, $v := .Params}}{{if $i}}{{if gt $i 1}}, {{end}}p{{$i}}{{end}}{{end}})
+		p0.{{.Name}}({{range $i, $v := .Params}}{{if $i}}{{if gt $i 1}}, {{end}}p{{$i}}{{end}}{{end}}{{if .Signature.Variadic}}...{{end}})
 		{{else}}
-		{{.Package.Pkg.Name}}.{{.Name}}({{range $i, $v := .Params}}{{if $i}}, {{end}}p{{$i}}{{end}})
+		{{.Package.Pkg.Name}}.{{.Name}}({{range $i, $v := .Params}}{{if $i}}, {{end}}p{{$i}}{{end}}{{if .Signature.Variadic}}...{{end}})
 		{{end}}
 	}
 }`

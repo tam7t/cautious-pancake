@@ -153,4 +153,12 @@ func YesFmtErr(a int) error {
 	return fmt.Errorf("bad %s", "asdf")
 }
 
+func YesVariadic(nums ...int) int {
+	total := 0
+	for _, num := range nums {
+		total += num
+	}
+	return total
+}
+
 // TODO: do i care if it mutates the input?
