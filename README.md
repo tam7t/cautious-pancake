@@ -2,15 +2,10 @@
 github generated the repo name for me
 
 ## fuzzing
-This is a work in progress project to automate fuzzing of golang packages.
-
-[go-fuzz](https://github.com/dvyukov/go-fuzz) is a great tool for finding bugs in golang programs, but it
-requires that you identify and instrument the functions to fuzz. Thats where `cautious-pancake` comes in.
-
-`cautious-pancake` identifies [pure function](https://en.wikipedia.org/wiki/Pure_function) in golang packages.
-These are functions can be fuzzed easily since they only operate on their direct inputs and not global
-state.
-
+`cautious-pancake` aims to make fuzzing golang packages easier by identifying
+[pure functions](https://en.wikipedia.org/wiki/Pure_function). These functions
+can be easily fuzzed since they only operate on their direct inputs and do not
+modify global state.
 
 ## example
 
@@ -19,28 +14,24 @@ Given a package, `pancakeinfo` will tell you which functions are pure:
 
 ```
 $ go install github.com/tam7t/cautious-pancake/cmd/pancakeinfo
-$ pancakeinfo github.com/mdlayher/arp
-github.com/mdlayher/arp.NewPacket
-	Pure
-(github.com/mdlayher/arp.Client).HardwareAddr
-	Pure
-(*github.com/mdlayher/arp.Packet).UnmarshalBinary
-	Pure
-(*github.com/mdlayher/arp.Packet).MarshalBinary
-	Pure
+$ pancakeinfo -pkg=github.com/mdlayher/arp
+NewPacket Pure
+(Client).HardwareAddr Pure
+(*Packet).MarshalBinary Pure
+(*Packet).UnmarshalBinary Pure
 ```
 
-You can set `IMPURE` environment variable to show information about why
-functions were deemed impure and `ALL` to include info on unexported functions.
+The `-filter=impure` flag will return all functions deemed impure, including
+the reason for the determination and the `-all` flag will display information
+on private functions as well.
 
-### `pancakeid`
-You can provide `cautious-pancake` with a package to analyze and it will print out all of the 'pure' functions
-and attempt to generate code that can be run to fuzz those functions:
+### `pancakegen`
+Given a package and a function, `pancakegen` will generate code to fuzz that
+function:
 
 ```
-$ go install github.com/tam7t/cautious-pancake/cmd/pancakeid
-$ pancakeid github.com/tam7t/cautious-pancake/fixtures
--- (YesMaybePanic)
+$ go install github.com/tam7t/cautious-pancake/cmd/pancakegen
+$ pancakegen -pkg=github.com/tam7t/cautious-pancake/fixtures -func=YesMaybePanic
 package main
 
 import (
@@ -53,6 +44,7 @@ import (
 func main() {
 	f := fuzz.New()
 	var p0 byte
+
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("found panic", r)
@@ -61,14 +53,14 @@ func main() {
 	}()
 	for {
 		f.Fuzz(&p0)
+
 		fixtures.YesMaybePanic(p0)
+
 	}
 }
---
--- (YesManipulate)
-...
 ```
-If you run the generated code for `YesMaybePanic` you will quickly get the following output:
+
+If you run the generated code you will quickly get:
 ```
 found panic bad input
 p0: 10
