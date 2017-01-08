@@ -46,6 +46,7 @@ const fuzzTemp = `package main
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	"github.com/google/gofuzz"
 	"{{.Package.Pkg.Path}}"
@@ -57,8 +58,9 @@ func main() { {{ $length := len .Params }}{{if gt $length 0}}
 {{end}}
 	defer func() {
 		if r := recover(); r != nil {
+			fmt.Printf("%s\n", debug.Stack())
 			fmt.Println("found panic", r){{range $i, $v := .Params}}
-			fmt.Printf("p{{$i}}: %v\n", p{{$i}}){{end}}
+			fmt.Printf("p{{$i}}: %+v\n", p{{$i}}){{end}}
 		}
 	}()
 	for { {{range $i, $v := .Params}}
