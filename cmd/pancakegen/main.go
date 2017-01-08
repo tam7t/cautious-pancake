@@ -16,15 +16,12 @@ import (
 )
 
 func main() {
+	pkgPtr := flag.String("pkg", "", "package path")
+	funcPtr := flag.String("func", "", "function")
 	flag.Parse()
 
 	conf := loader.Config{Build: &build.Default}
-
-	// Use the initial packages from the command line.
-	_, err := conf.FromArgs(flag.Args(), false)
-	if err != nil {
-		log.Fatal(err)
-	}
+	conf.Import(*pkgPtr)
 
 	// Load, parse and type-check the whole program.
 	iprog, err := conf.Load()
@@ -39,8 +36,7 @@ func main() {
 	}
 
 	for _, v := range cg.Pure() {
-		if v.Object() != nil && v.Object().Exported() {
-			fmt.Println("--")
+		if v.RelString(v.Package().Pkg) == *funcPtr {
 			fmt.Println(PrintFuzz(v))
 		}
 	}
