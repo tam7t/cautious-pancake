@@ -52,8 +52,10 @@ import (
 	"{{.Package.Pkg.Path}}"
 )
 
-func main() { {{if gt (len .Params) 0}}{{if or ( (gt (len .Params) 1) (not fuzznil .) )}}
-	f := fuzz.New(){{end}}{{if fuzznil .}}
+func main() { {{if gt (len .Params) 0}}{{if not (fuzznil .) }}
+	f := fuzz.New(){{end}}{{if fuzznil .}}{{if gt (len .Params) 1}}
+	f := fuzz.New()
+	{{end}}
 	f1 := fuzz.New().NilChance(0){{end}}{{end}}
 
 {{range $i, $v := .Params}}	var p{{$i}} {{$v.Type | strippkg}}
