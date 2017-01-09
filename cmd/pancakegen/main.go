@@ -52,8 +52,10 @@ import (
 	"{{.Package.Pkg.Path}}"
 )
 
-func main() { {{ $length := len .Params }}{{if gt $length 0}}
-	f := fuzz.New(){{end}}
+func main() { {{if gt (len .Params) 0}}{{if or ( (gt (len .Params) 1) (not fuzznil .) )}}
+	f := fuzz.New(){{end}}{{if fuzznil .}}
+	f1 := fuzz.New().NilChance(0){{end}}{{end}}
+
 {{range $i, $v := .Params}}	var p{{$i}} {{$v.Type | strippkg}}
 {{end}}
 	defer func() {
@@ -64,22 +66,31 @@ func main() { {{ $length := len .Params }}{{if gt $length 0}}
 		}
 	}()
 	for { {{range $i, $v := .Params}}
-		f.Fuzz(&p{{$i}}){{end}}
+		f{{if and (not $i) (fuzznil .)}}1{{end}}.Fuzz(&p{{$i}}){{end}}
 		{{if .Signature.Recv}}
-		p0.{{.Name}}({{range $i, $v := .Params}}{{if $i}}{{if gt $i 1}}, {{end}}p{{$i}}{{end}}{{end}}{{if .Signature.Variadic}}...{{end}})
-		{{else}}
-		{{.Package.Pkg.Name}}.{{.Name}}({{range $i, $v := .Params}}{{if $i}}, {{end}}p{{$i}}{{end}}{{if .Signature.Variadic}}...{{end}})
-		{{end}}
+		p0.{{.Name}}({{range $i, $v := .Params}}{{if $i}}{{if gt $i 1}}, {{end}}p{{$i}}{{end}}{{end}}{{if .Signature.Variadic}}...{{end}}){{else}}
+		{{.Package.Pkg.Name}}.{{.Name}}({{range $i, $v := .Params}}{{if $i}}, {{end}}p{{$i}}{{end}}{{if .Signature.Variadic}}...{{end}}){{end}}
 	}
 }`
 
 func PrintFuzz(f *ssa.Function) string {
 	var out bytes.Buffer
-	tmpl := template.Must(template.New("").Funcs(template.FuncMap{"strippkg": func(a interface{}) string {
-		return types.TypeString(a.(types.Type), func(p *types.Package) string {
-			return p.Name()
-		})
-	}}).Parse(fuzzTemp))
+	tmpl := template.Must(template.New("").Funcs(template.FuncMap{
+		"strippkg": func(a interface{}) string {
+			return types.TypeString(a.(types.Type), func(p *types.Package) string {
+				return p.Name()
+			})
+		},
+		"fuzznil": func(a interface{}) bool {
+			if f.Signature.Recv() != nil {
+				_, ok := f.Params[0].Type().(*types.Pointer)
+				if ok {
+					return true
+				}
+			}
+			return false
+		},
+	}).Parse(fuzzTemp))
 	tmpl.Execute(&out, f)
 	return out.String()
 }
