@@ -13,7 +13,7 @@ modify global state.
 Given a package, `pancakeinfo` will tell you which functions are pure:
 
 ```
-$ go install github.com/tam7t/cautious-pancake/cmd/pancakeinfo
+$ go get -u github.com/tam7t/cautious-pancake/cmd/pancakeinfo
 $ pancakeinfo -pkg=github.com/mdlayher/arp
 NewPacket Pure
 (Client).HardwareAddr Pure
@@ -30,7 +30,7 @@ Given a package and a function, `pancakegen` will generate code to fuzz that
 function:
 
 ```
-$ go install github.com/tam7t/cautious-pancake/cmd/pancakegen
+$ go get -u github.com/tam7t/cautious-pancake/cmd/pancakegen
 $ pancakegen -pkg=github.com/tam7t/cautious-pancake/fixtures -func=YesMaybePanic
 package main
 
