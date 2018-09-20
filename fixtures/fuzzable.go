@@ -16,8 +16,8 @@ import (
 // Functions are prefixed with Yes or No to indicate if it is 'trivally fuzzable'
 
 var startString = "start"
-var b func(a string) string = func(a string) string { return a }
-var e = errors.New("custom err")
+var bFunc = func(a string) string { return a }
+var errFoo = errors.New("custom err")
 
 func NoPrint(a string) {
 	fmt.Fprintln(os.Stdout, a)
@@ -35,7 +35,7 @@ func NoGlobalWrite(a string) {
 // No because a different function might have modified the
 // value of b between invocations of NoDynamicCall
 func NoDynamicCall(a string) string {
-	return b(a)
+	return bFunc(a)
 }
 
 type Foo interface {
@@ -101,7 +101,6 @@ type MyStuff struct {
 	MyValue string
 }
 
-// does not work yet
 func (a *MyStuff) YesParse(b string) {
 	a.MyValue = b
 }
@@ -139,11 +138,12 @@ func YesLog() {
 }
 
 func YesErr() error {
-	return e
+	// this is a global read, but since the type is an error it is ignored
+	return errFoo
 }
 
 func NoWriteErr() {
-	e = errors.New("foo")
+	errFoo = errors.New("foo")
 }
 
 func YesFmtErr(a int) error {
@@ -160,5 +160,3 @@ func YesVariadic(nums ...int) int {
 	}
 	return total
 }
-
-// TODO: do i care if it mutates the input?
