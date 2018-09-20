@@ -64,8 +64,8 @@ func TestAnalyze(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(exp, actual) {
-		t.Logf("want: %s\n", exp)
-		t.Logf("got: %s\n", actual)
+		t.Logf("want: %v\n", exp)
+		t.Logf("got: %v\n", actual)
 		t.Error("wrong packages")
 	}
 }

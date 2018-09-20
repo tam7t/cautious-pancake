@@ -30,13 +30,18 @@ type Node struct {
 }
 
 var (
-	// Ignore function calls that technically access global state, but are rarely
-	// an issue for fuzzing in practice
+	// DefaultIgnoreCall lists functions that should be ignored when
+	// determining if a function is pure. These calls may technically access
+	// or modify global state, but the side effects are rarely important.
 	DefaultIgnoreCall = map[string][]string{
 		"log": {"Print", "Printf", "Println"},
 		"fmt": {"Print", "Printf", "Println", "Errorf"},
 	}
 
+	// DefaultIgnoreRead lists global variables that should be ignored
+	// when determining if a function is pure. These variables may
+	// change values between function calls, but in practice are most
+	// often used as constants.
 	DefaultIgnoreRead = map[string][]string{
 		"encoding/binary": {"BigEndian", "LittleEndian"},
 	}
@@ -61,6 +66,7 @@ func NewCallGraph(iprog *loader.Program) *CallGraph {
 	}
 }
 
+// Pure returns whether an analyzed node is pure.
 func (n *Node) Pure() bool {
 	return (n.RuleBasic == nil && n.RuleInterface == nil && n.RuleCallee == nil)
 }
@@ -79,10 +85,10 @@ func (n *Node) String() string {
 }
 
 // Analyze examines the callgraph looking for functions that modify global
-// state or call functions that modify global state
+// state or call functions that modify global state.
 func (cg *CallGraph) Analyze() error {
 	// basic analysis
-	for fn, _ := range cg.CallGraph.Nodes {
+	for fn := range cg.CallGraph.Nodes {
 		n := &Node{
 			CallGraph: cg,
 		}
