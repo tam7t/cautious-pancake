@@ -15,15 +15,16 @@ Given a package, `pancakeinfo` will tell you which functions are pure:
 ```
 $ go get -u github.com/tam7t/cautious-pancake/cmd/pancakeinfo
 $ pancakeinfo -pkg=github.com/mdlayher/arp
-NewPacket Pure
-(Client).HardwareAddr Pure
-(*Packet).MarshalBinary Pure
-(*Packet).UnmarshalBinary Pure
+(Operation).String
+NewPacket
+(Client).HardwareAddr
+(*Packet).UnmarshalBinary
+(*Packet).MarshalBinary
 ```
 
-The `-filter=impure` flag will return all functions deemed impure, including
-the reason for the determination and the `-all` flag will display information
-on private functions as well.
+The `-pure=false` flag will return all functions deemed impure, including
+the reason for the determination and the `-private` flag will display
+information on private functions as well.
 
 ### `pancakegen`
 Given a package and a function, `pancakegen` will generate code to fuzz that
