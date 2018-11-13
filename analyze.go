@@ -71,6 +71,21 @@ func (n *Node) Pure() bool {
 	return (n.RuleBasic == nil && n.RuleInterface == nil && n.RuleCallee == nil)
 }
 
+// Reason returns descriptive strings for why a node is not pure.
+func (n *Node) Reason() (string, string) {
+	if n.RuleBasic != nil {
+		return "basic", fmt.Sprintf("%s", n.CallGraph.Prog.Fset.Position(*n.RuleBasic))
+	}
+	if n.RuleInterface != nil {
+		return "iface", fmt.Sprintf("%s", n.CallGraph.Prog.Fset.Position(*n.RuleInterface))
+	}
+	if n.RuleCallee != nil {
+		return "calls", fmt.Sprintf("%s", n.RuleCallee)
+	}
+	return "", ""
+
+}
+
 func (n *Node) String() string {
 	if n.RuleBasic != nil {
 		return fmt.Sprintf("Impure - basic - %s", n.CallGraph.Prog.Fset.Position(*n.RuleBasic))
