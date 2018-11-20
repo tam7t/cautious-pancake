@@ -1,6 +1,7 @@
 package cautiouspancake
 
 import (
+	"errors"
 	"fmt"
 	"go/token"
 	"go/types"
