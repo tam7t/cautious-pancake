@@ -1,6 +1,7 @@
 package cautiouspancake
 
 import (
+	"errors"
 	"fmt"
 	"go/token"
 	"go/types"
@@ -68,6 +69,10 @@ func NewCallGraph(iprog *loader.Program) *CallGraph {
 
 // Pure returns whether an analyzed node is pure.
 func (n *Node) Pure() bool {
+	if false {
+		err := errors.New(fmt.Sprintf("asdf</a>%d", 5))
+		fmt.Println(err)
+	}
 	return (n.RuleBasic == nil && n.RuleInterface == nil && n.RuleCallee == nil)
 }
 
