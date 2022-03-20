@@ -1,71 +1,85 @@
 package cautiouspancake
 
 import (
-	"fmt"
 	"go/build"
-	"log"
-	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"golang.org/x/tools/go/loader"
 )
 
-func TestAnalyze(t *testing.T) {
-	pkgs := []string{"github.com/tam7t/cautious-pancake/fixtures"}
+func loadFixture(t *testing.T) *loader.Program {
+	t.Helper()
 
-	exp := map[string]bool{
-		"YesManipulate":             false,
-		"YesPanicArray":             false,
-		"YesPanicNil":               false,
-		"YesAnonymousDynamicCall":   false,
-		"YesFuncParam":              false,
-		"YesAnonymousDynamicCall$1": false,
-		"YesParser":                 false,
-		"YesParse":                  false,
-		"YesMultArgs":               false,
-		"YesMaybePanic":             false,
-		"Yes":                       false,
-		"init$1":                    false,
-		"YesAppend":                 false,
-		"yes":                       false,
-		"YesPanic":                  false,
-		"YesRead":                   false,
-		"YesLog":                    false,
-		"YesErr":                    false,
-		"YesFmtErr":                 false,
-		"YesVariadic":               false,
-	}
+	pkgs := []string{"github.com/tam7t/cautious-pancake/fixtures"}
 
 	conf := loader.Config{Build: &build.Default}
 
 	// Use the initial packages from the command line.
 	_, err := conf.FromArgs(pkgs, false)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	// Load, parse and type-check the whole program.
 	iprog, err := conf.Load()
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
+
+	return iprog
+}
+
+func TestAnalyze(t *testing.T) {
+	want := map[string]bool{
+		"YesManipulate":             true,
+		"YesPanicArray":             true,
+		"YesPanicNil":               true,
+		"YesAnonymousDynamicCall":   true,
+		"YesFuncParam":              true,
+		"YesAnonymousDynamicCall$1": true,
+		"YesParser":                 true,
+		"YesParse":                  true,
+		"YesMultArgs":               true,
+		"YesMaybePanic":             true,
+		"Yes":                       true,
+		"init$1":                    true,
+		"YesAppend":                 true,
+		"yes":                       true,
+		"YesPanic":                  true,
+		"YesRead":                   true,
+		"YesLog":                    true,
+		"YesErr":                    true,
+		"YesFmtErr":                 true,
+		"YesVariadic":               true,
+		"NoDynamicCall":             false,
+		"NoGlobalRead":              false,
+		"NoGlobalWrite":             false,
+		"NoInterface":               false,
+		"NoNet":                     false,
+		"NoPrint":                   false,
+		"NoWrite":                   false,
+		"NoWriteErr":                false,
+		"NoWriter":                  false,
+		"init":                      false,
+	}
+
+	iprog := loadFixture(t)
 
 	cg := NewCallGraph(iprog)
-	err = cg.Analyze()
-	if err != nil {
-		t.Error("err is not nil")
+	if err := cg.Analyze(); err != nil {
+		t.Errorf("Analyze() returned error: %v", err)
 	}
 
-	actual := make(map[string]bool)
-
+	got := make(map[string]bool)
 	for _, v := range cg.Pure() {
-		fmt.Println(v.Name())
-		actual[v.Name()] = false
+		got[v.Name()] = true
+	}
+	for _, v := range cg.Impure() {
+		got[v.Name()] = false
 	}
 
-	if !reflect.DeepEqual(exp, actual) {
-		t.Logf("want: %v\n", exp)
-		t.Logf("got: %v\n", actual)
-		t.Error("wrong packages")
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("Analyze() mismatch (-want +got):\n%s", diff)
 	}
 }
