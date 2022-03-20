@@ -39,39 +39,58 @@ function:
 ```text
 $ go get -u github.com/tam7t/cautious-pancake/cmd/pancakegen
 $ pancakegen -pkg=github.com/tam7t/cautious-pancake/fixtures -func=YesMaybePanic
-package main
+package fixtures
 
 import (
-	"fmt"
-
-	"github.com/google/gofuzz"
-	"github.com/tam7t/cautious-pancake/fixtures"
+	"testing"
 )
 
-func main() {
-	f := fuzz.New()
-	var p0 byte
-
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("found panic", r)
-			fmt.Printf("p0: %v\n", p0)
-		}
-	}()
-	for {
-		f.Fuzz(&p0)
-
-		fixtures.YesMaybePanic(p0)
-
-	}
+func FuzzYesMaybePanic(f *testing.F) {
+	f.Fuzz(func(t *testing.T, p0 byte) { 
+		YesMaybePanic(p0)
+	})
 }
 ```
 
 If you run the generated code you will quickly get:
 
-```text
-found panic bad input
-p0: 10
+```shell
+$ go test ./fixtures/... --fuzz=Fuzz
+fuzz: elapsed: 0s, gathering baseline coverage: 0/1 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 1/1 completed, now fuzzing with 16 workers
+fuzz: elapsed: 0s, execs: 20 (701/sec), new interesting: 0 (total: 1)
+--- FAIL: FuzzYesMaybePanic (0.03s)
+    --- FAIL: FuzzYesMaybePanic (0.00s)
+        testing.go:1349: panic: bad input
+            goroutine 35 [running]:
+            runtime/debug.Stack()
+                /usr/local/go/src/runtime/debug/stack.go:24 +0x90
+            testing.tRunner.func1()
+                /usr/local/go/src/testing/testing.go:1349 +0x1f2
+            panic({0x65dd40, 0x6ee3e0})
+                /usr/local/go/src/runtime/panic.go:838 +0x207
+            github.com/tam7t/cautious-pancake/fixtures.YesMaybePanic(...)
+                /home/tam7t/code/github.com/tam7t/cautious-pancake/fixtures/fuzzable.go:97
+            github.com/tam7t/cautious-pancake/fixtures.FuzzYesMaybePanic.func1(0x0?, 0xa)
+                /home/tam7t/code/github.com/tam7t/cautious-pancake/fixtures/fuzzable_test.go:9 +0x77
+            reflect.Value.call({0x660400?, 0x6b5f98?, 0x13?}, {0x69f589, 0x4}, {0xc00009bc80, 0x2, 0x2?})
+                /usr/local/go/src/reflect/value.go:556 +0x845
+            reflect.Value.Call({0x660400?, 0x6b5f98?, 0x514?}, {0xc00009bc80, 0x2, 0x2})
+                /usr/local/go/src/reflect/value.go:339 +0xbf
+            testing.(*F).Fuzz.func1.1(0x0?)
+                /usr/local/go/src/testing/fuzz.go:337 +0x231
+            testing.tRunner(0xc0001a16c0, 0xc00018aea0)
+                /usr/local/go/src/testing/testing.go:1439 +0x102
+            created by testing.(*F).Fuzz.func1
+                /usr/local/go/src/testing/fuzz.go:324 +0x5b8
+            
+    
+    Failing input written to testdata/fuzz/FuzzYesMaybePanic/358fa4d16da00de4d29482b2ea74da673eb27bfc5614d2b123ac0aa89e0e1ea5
+    To re-run:
+    go test -run=FuzzYesMaybePanic/358fa4d16da00de4d29482b2ea74da673eb27bfc5614d2b123ac0aa89e0e1ea5
+FAIL
+exit status 1
+FAIL    github.com/tam7t/cautious-pancake/fixtures      0.032s
 ```
 
 indicating that `fixtures.YesMaybePanic(0xA)` will result in a panic.
