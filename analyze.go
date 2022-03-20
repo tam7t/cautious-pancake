@@ -184,6 +184,21 @@ func (cg *CallGraph) Impure() []*ssa.Function {
 	return filtered
 }
 
+// Lookup lookup a function in the CallGraph by name and return whether it is
+// pure.
+func (cg *CallGraph) Lookup(name string) (*ssa.Function, bool) {
+	for k, v := range cg.Mapping {
+		if k == nil {
+			continue
+		}
+
+		if k.RelString(k.Package().Pkg) == name {
+			return k, v.Pure()
+		}
+	}
+	return nil, false
+}
+
 // isWhitelisted returns whether the ssa.Member (function or variable
 // reference) is in the whitelist. The whitlelist is a map of package paths to
 // a slice of names. Additionally, all error types are considered whitelisted
