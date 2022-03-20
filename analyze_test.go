@@ -52,6 +52,7 @@ func TestAnalyze(t *testing.T) {
 		"YesErr":                    true,
 		"YesFmtErr":                 true,
 		"YesVariadic":               true,
+		"YesArgs":                   true,
 		"NoDynamicCall":             false,
 		"NoGlobalRead":              false,
 		"NoGlobalWrite":             false,

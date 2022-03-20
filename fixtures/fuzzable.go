@@ -1,6 +1,7 @@
 package fixtures
 
 import (
+	"bytes"
 	bin "encoding/binary"
 	"errors"
 	"fmt"
@@ -159,4 +160,10 @@ func YesVariadic(nums ...int) int {
 		total += num
 	}
 	return total
+}
+
+func YesArgs(a string, b []byte, c int, d bool, e float64) {
+	if bytes.Equal(b, []byte{0x32, 0xFF}) {
+		panic("bad input")
+	}
 }
