@@ -1,7 +1,11 @@
-# cautious-pancake [![Build Status](https://travis-ci.org/tam7t/cautious-pancake.svg?branch=master)](https://travis-ci.org/tam7t/cautious-pancake) [![GoDoc](https://godoc.org/github.com/tam7t/cautious-pancake?status.svg)](https://godoc.org/github.com/tam7t/cautious-pancake) [![Go Report Card](https://goreportcard.com/badge/github.com/tam7t/cautious-pancake)](https://goreportcard.com/report/github.com/tam7t/cautious-pancake)
+# cautious-pancake
+
+[![GoDoc](https://godoc.org/github.com/tam7t/cautious-pancake?status.svg)](https://pkg.go.dev/github.com/tam7t/cautious-pancake) [![Go Report Card](https://goreportcard.com/badge/github.com/tam7t/cautious-pancake)](https://goreportcard.com/report/github.com/tam7t/cautious-pancake)
+
 github generated the repo name for me
 
 ## fuzzing
+
 `cautious-pancake` aims to make fuzzing golang packages easier by identifying
 [pure functions](https://en.wikipedia.org/wiki/Pure_function). These functions
 can be easily fuzzed since they only operate on their direct inputs and do not
@@ -10,9 +14,10 @@ modify global state.
 ## example
 
 ### `pancakeinfo`
+
 Given a package, `pancakeinfo` will tell you which functions are pure:
 
-```
+```shell
 $ go get -u github.com/tam7t/cautious-pancake/cmd/pancakeinfo
 $ pancakeinfo -pkg=github.com/mdlayher/arp
 (Operation).String
@@ -27,10 +32,11 @@ the reason for the determination and the `-private` flag will display
 information on private functions as well.
 
 ### `pancakegen`
+
 Given a package and a function, `pancakegen` will generate code to fuzz that
 function:
 
-```
+```text
 $ go get -u github.com/tam7t/cautious-pancake/cmd/pancakegen
 $ pancakegen -pkg=github.com/tam7t/cautious-pancake/fixtures -func=YesMaybePanic
 package main
@@ -62,8 +68,10 @@ func main() {
 ```
 
 If you run the generated code you will quickly get:
-```
+
+```text
 found panic bad input
 p0: 10
 ```
+
 indicating that `fixtures.YesMaybePanic(0xA)` will result in a panic.
